@@ -40,7 +40,7 @@ namespace System.Net.Http
 
 		bool allowAutoRedirect;
 		DecompressionMethods automaticDecompression;
-        System.Net.Couchbase.CookieContainer cookieContainer;
+        System.Net.CookieContainer cookieContainer;
 		ICredentials credentials;
 		int maxAutomaticRedirections;
 		long maxRequestContentBufferSize;
@@ -51,9 +51,9 @@ namespace System.Net.Http
 		bool useProxy;
 		ClientCertificateOption certificate;
 		int sentRequest;
-        System.Net.Couchbase.HttpWebRequest wrequest
+        System.Net.HttpWebRequest wrequest
         {
-            get { return (System.Net.Couchbase.HttpWebRequest)_wrequest; }
+            get { return (System.Net.HttpWebRequest)_wrequest; }
         }
         private object _wrequest;
 
@@ -108,9 +108,9 @@ namespace System.Net.Http
 			}
 		}
 
-		public System.Net.Couchbase.CookieContainer CookieContainer {
+		public System.Net.CookieContainer CookieContainer {
 			get {
-                return cookieContainer ?? (cookieContainer = new System.Net.Couchbase.CookieContainer());
+                return cookieContainer ?? (cookieContainer = new System.Net.CookieContainer());
 			}
 			set {
 				EnsureModifiability ();
@@ -238,9 +238,9 @@ namespace System.Net.Http
 			base.Dispose (disposing);
 		}
 
-        internal virtual System.Net.Couchbase.HttpWebRequest CreateWebRequest(HttpRequestMessage request)
+        internal virtual System.Net.HttpWebRequest CreateWebRequest(HttpRequestMessage request)
 		{
-            var wr = (System.Net.Couchbase.HttpWebRequest)System.Net.Couchbase.WebRequest.Create(request.RequestUri);
+            var wr = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(request.RequestUri);
 
 			wr.ConnectionGroupName = connectionGroupName;
 			wr.Method = request.Method.Method;
@@ -285,7 +285,7 @@ namespace System.Net.Http
 			return wr;
 		}
 
-        HttpResponseMessage CreateResponseMessage(System.Net.Couchbase.HttpWebResponse wr, HttpRequestMessage requestMessage, CancellationToken cancellationToken)
+        HttpResponseMessage CreateResponseMessage(System.Net.HttpWebResponse wr, HttpRequestMessage requestMessage, CancellationToken cancellationToken)
 		{
 			var response = new HttpResponseMessage (wr.StatusCode);
 			response.RequestMessage = requestMessage;
@@ -333,17 +333,17 @@ namespace System.Net.Http
 				intermediate = CompletedTask.Default;
 			}
 
-            System.Net.Couchbase.HttpWebResponse wresponse = null;
+            System.Net.HttpWebResponse wresponse = null;
 			Func<Task<IDisposable>> resource =
-                () => Task.FromResult<IDisposable> (cancellationToken.Register (l => ((System.Net.Couchbase.HttpWebRequest) l).Abort (), wrequest));
+                () => Task.FromResult<IDisposable> (cancellationToken.Register (l => ((System.Net.HttpWebRequest) l).Abort (), wrequest));
 			Func<Task<IDisposable>, Task> body =
 				_ => {
-                    return wrequest.GetResponseAsync().Select(task => wresponse = (System.Net.Couchbase.HttpWebResponse)task.Result)
-                        .Catch<System.Net.Couchbase.WebException>(
+                    return wrequest.GetResponseAsync().Select(task => wresponse = (System.Net.HttpWebResponse)task.Result)
+                        .Catch<System.Net.WebException>(
 							(task, we) => {
 								if (we.Status == WebExceptionStatus.ProtocolError) {
 									// HttpClient shouldn't throw exceptions for these errors
-                                    wresponse = (System.Net.Couchbase.HttpWebResponse)we.Response;
+                                    wresponse = (System.Net.HttpWebResponse)we.Response;
 								} else if (we.Status != WebExceptionStatus.RequestCanceled) {
 									// propagate the antecedent
 									return task;
@@ -366,7 +366,7 @@ namespace System.Net.Http
 				.Select (_ => CreateResponseMessage (wresponse, request, cancellationToken));
 		}
 
-        private static void AddRequestHeaders(System.Net.Couchbase.HttpWebRequest request, HttpRequestHeaders headers)
+        private static void AddRequestHeaders(System.Net.HttpWebRequest request, HttpRequestHeaders headers)
         {
 			foreach (var header in headers) {
 				switch (header.Key.ToLowerInvariant ()) {
@@ -435,7 +435,7 @@ namespace System.Net.Http
 			}
 		}
 
-        private static void AddContentHeaders(System.Net.Couchbase.HttpWebRequest request, HttpContentHeaders headers)
+        private static void AddContentHeaders(System.Net.HttpWebRequest request, HttpContentHeaders headers)
         {
 			foreach (var header in headers) {
 				switch (header.Key.ToLowerInvariant ()) {

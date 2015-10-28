@@ -124,7 +124,7 @@ namespace System.Net.Http
 			base.Dispose (disposing);
 		}
 
-        protected internal override Task SerializeToStreamAsync(Stream stream, System.Net.Couchbase.TransportContext context)
+        protected internal override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
 			// RFC 2046
 			//

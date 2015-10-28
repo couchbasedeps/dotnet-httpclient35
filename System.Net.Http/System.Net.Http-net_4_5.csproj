@@ -13,7 +13,7 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">.\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <ReleaseVersion>1.1.1</ReleaseVersion>
+    <ReleaseVersion>1.1</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>True</DebugSymbols>
@@ -96,44 +96,9 @@
     <Compile Include="System.Net.Http\StreamContent.cs" />
     <Compile Include="System.Net.Http\StringContent.cs" />
     <Compile Include="System.Net.Http\StringEx.cs" />
-    <Compile Include="System.Net\AuthenticationManager.cs" />
-    <Compile Include="System.Net\Authorization.cs" />
-    <Compile Include="System.Net\BasicClient.cs" />
-    <Compile Include="System.Net\BindIPEndPoint.cs" />
     <Compile Include="System.Net\ChannelBinding.cs" />
     <Compile Include="System.Net\ChannelBindingKind.cs" />
-    <Compile Include="System.Net\ChunkStream.cs" />
-    <Compile Include="System.Net\Cookie.cs" />
-    <Compile Include="System.Net\CookieCollection.cs" />
-    <Compile Include="System.Net\CookieContainer.cs" />
-    <Compile Include="System.Net\CookieException.cs" />
-    <Compile Include="System.Net\CookieParser.cs" />
-    <Compile Include="System.Net\DefaultCertificatePolicy.cs" />
-    <Compile Include="System.Net\DigestClient.cs" />
-    <Compile Include="System.Net\HttpContinueDelegate.cs" />
-    <Compile Include="System.Net\HttpRequestCreator.cs" />
-    <Compile Include="System.Net\HttpWebRequest.cs" />
-    <Compile Include="System.Net\HttpWebResponse.cs" />
-    <Compile Include="System.Net\IAuthenticationModule.cs" />
-    <Compile Include="System.Net\ICertificatePolicy.cs" />
-    <Compile Include="System.Net\IWebConnectionState.cs" />
-    <Compile Include="System.Net\IWebRequestCreate.cs" />
-    <Compile Include="System.Net\MonoHttpDate.cs" />
-    <Compile Include="System.Net\NetConfig.cs" />
-    <Compile Include="System.Net\NtlmClient.cs" />
-    <Compile Include="System.Net\ServicePoint.cs" />
-    <Compile Include="System.Net\ServicePointManager.cs" />
-    <Compile Include="System.Net\SimpleAsyncResult.cs" />
     <Compile Include="System.Net\TransportContext.cs" />
-    <Compile Include="System.Net\WebAsyncResult.cs" />
-    <Compile Include="System.Net\WebConnection.cs" />
-    <Compile Include="System.Net\WebConnectionData.cs" />
-    <Compile Include="System.Net\WebConnectionGroup.cs" />
-    <Compile Include="System.Net\WebConnectionStream.cs" />
-    <Compile Include="System.Net\WebException.cs" />
-    <Compile Include="System.Net\WebHeaderCollection.cs" />
-    <Compile Include="System.Net\WebRequest.cs" />
-    <Compile Include="System.Net\WebResponse.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

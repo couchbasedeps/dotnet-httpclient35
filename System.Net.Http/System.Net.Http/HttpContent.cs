@@ -28,6 +28,7 @@
 
 using System.Net.Http.Headers;
 using System.IO;
+using System.Net.Couchbase;
 using System.Threading.Tasks;
 using System.Text;
 using Rackspace.Threading;
@@ -87,7 +88,7 @@ namespace System.Net.Http
 			return CopyToAsync (stream, null);
 		}
 
-        public Task CopyToAsync(Stream stream, System.Net.Couchbase.TransportContext context)
+        public Task CopyToAsync(Stream stream, TransportContext context)
 		{
 			if (stream == null)
 				throw new ArgumentNullException ("stream");
@@ -207,7 +208,7 @@ namespace System.Net.Http
 			return value.Length;
 		}
 
-        protected internal abstract Task SerializeToStreamAsync(Stream stream, System.Net.Couchbase.TransportContext context);
+        protected internal abstract Task SerializeToStreamAsync(Stream stream, TransportContext context);
 		protected internal abstract bool TryComputeLength (out long length);
 	}
 }

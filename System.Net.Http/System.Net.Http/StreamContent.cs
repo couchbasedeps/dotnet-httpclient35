@@ -30,6 +30,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Rackspace.Threading;
+using System.Net.Couchbase;
 
 namespace System.Net.Http
 {
@@ -82,7 +83,7 @@ namespace System.Net.Http
 			base.Dispose (disposing);
 		}
 
-        protected internal override Task SerializeToStreamAsync(Stream stream, System.Net.Couchbase.TransportContext context)
+        protected internal override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
 			return content.CopyToAsync (stream, bufferSize, cancellationToken);
 		}

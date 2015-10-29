@@ -2,7 +2,7 @@
 // HttpClientHandler.cs
 //
 // Authors:
-//	Marek Safar  <marek.safar@gmail.com>
+//  Marek Safar  <marek.safar@gmail.com>
 //
 // Copyright (C) 2011 Xamarin Inc (http://www.xamarin.com)
 //
@@ -31,430 +31,362 @@ using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Net.Http.Headers;
 using Rackspace.Threading;
+using System.Reflection;
+using System.IO;
 
 namespace System.Net.Http
 {
-	public class HttpClientHandler : HttpMessageHandler
-	{
-		static long groupCounter;
+    public class HttpClientHandler : HttpMessageHandler
+    {
+        static long groupCounter;
 
-		bool allowAutoRedirect;
-		DecompressionMethods automaticDecompression;
-        System.Net.CookieContainer cookieContainer;
-		ICredentials credentials;
-		int maxAutomaticRedirections;
-		long maxRequestContentBufferSize;
-		bool preAuthenticate;
-		IWebProxy proxy;
-		bool useCookies;
-		bool useDefaultCredentials;
-		bool useProxy;
-		ClientCertificateOption certificate;
-		int sentRequest;
-        System.Net.HttpWebRequest wrequest
+        bool allowAutoRedirect;
+        DecompressionMethods automaticDecompression;
+        CookieContainer cookieContainer;
+        ICredentials credentials;
+        int maxAutomaticRedirections;
+        long maxRequestContentBufferSize;
+        bool preAuthenticate;
+        IWebProxy proxy;
+        bool useCookies;
+        bool useDefaultCredentials;
+        bool useProxy;
+        ClientCertificateOption certificate;
+        int sentRequest;
+        string connectionGroupName;
+        int disposed;
+
+        public HttpClientHandler ()
         {
-            get { return (System.Net.HttpWebRequest)_wrequest; }
+            allowAutoRedirect = true;
+            maxAutomaticRedirections = 50;
+            maxRequestContentBufferSize = int.MaxValue;
+            useCookies = true;
+            useProxy = true;
+            connectionGroupName = "HttpClientHandler" + Interlocked.Increment (ref groupCounter);
         }
-        private object _wrequest;
 
-		string connectionGroupName;
-		int disposed;
-
-		public HttpClientHandler ()
-		{
-			allowAutoRedirect = true;
-			maxAutomaticRedirections = 50;
-			maxRequestContentBufferSize = int.MaxValue;
-			useCookies = true;
-			useProxy = true;
-			connectionGroupName = "HttpClientHandler" + Interlocked.Increment (ref groupCounter);
-		}
-
-		internal void EnsureModifiability ()
-		{
-			if (sentRequest != 0)
-				throw new InvalidOperationException (
-					"This instance has already started one or more requests. " +
-					"Properties can only be modified before sending the first request.");
-		}
-
-		public bool AllowAutoRedirect {
-			get {
-				return allowAutoRedirect;
-			}
-			set {
-				EnsureModifiability ();
-				allowAutoRedirect = value;
-			}
-		}
-
-		public DecompressionMethods AutomaticDecompression {
-			get {
-				return automaticDecompression;
-			}
-			set {
-				EnsureModifiability ();
-				automaticDecompression = value;
-			}
-		}
-
-		public ClientCertificateOption ClientCertificateOptions {
-			get {
-				return certificate;
-			}
-			set {
-				EnsureModifiability ();
-				certificate = value;
-			}
-		}
-
-		public System.Net.CookieContainer CookieContainer {
-			get {
-                return cookieContainer ?? (cookieContainer = new System.Net.CookieContainer());
-			}
-			set {
-				EnsureModifiability ();
-				cookieContainer = value;
-			}
-		}
-
-		public ICredentials Credentials {
-			get {
-				return credentials;
-			}
-			set {
-				EnsureModifiability ();
-				credentials = value;
-			}
-		}
-
-		public int MaxAutomaticRedirections {
-			get {
-				return maxAutomaticRedirections;
-			}
-			set {
-				EnsureModifiability ();
-				if (value <= 0)
-					throw new ArgumentOutOfRangeException ();
-
-				maxAutomaticRedirections = value;
-			}
-		}
-
-		public long MaxRequestContentBufferSize {
-			get {
-				return maxRequestContentBufferSize;
-			}
-			set {
-				EnsureModifiability ();
-				if (value < 0)
-					throw new ArgumentOutOfRangeException ();
-
-				maxRequestContentBufferSize = value;
-			}
-		}
-
-		public bool PreAuthenticate {
-			get {
-				return preAuthenticate;
-			}
-			set {
-				EnsureModifiability ();
-				preAuthenticate = value;
-			}
-		}
-
-		public IWebProxy Proxy {
-			get {
-				return proxy;
-			}
-			set {
-				EnsureModifiability ();
-				if (!UseProxy)
-					throw new InvalidOperationException ();
-
-				proxy = value;
-			}
-		}
-
-		public virtual bool SupportsAutomaticDecompression {
-			get {
-				return true;
-			}
-		}
-
-		public virtual bool SupportsProxy {
-			get {
-				return true;
-			}
-		}
-
-		public virtual bool SupportsRedirectConfiguration {
-			get {
-				return true;
-			}
-		}
-
-		public bool UseCookies {
-			get {
-				return useCookies;
-			}
-			set {
-				EnsureModifiability ();
-				useCookies = value;
-			}
-		}
-
-		public bool UseDefaultCredentials {
-			get {
-				return useDefaultCredentials;
-			}
-			set {
-				EnsureModifiability ();
-				useDefaultCredentials = value;
-			}
-		}
-
-		public bool UseProxy {
-			get {
-				return useProxy;
-			}
-			set {
-				EnsureModifiability ();
-				useProxy = value;
-			}
-		}
-
-		protected override void Dispose (bool disposing)
-		{
-			if (disposing) {
-				if (wrequest != null) {
-					wrequest.ServicePoint.CloseConnectionGroup (wrequest.ConnectionGroupName);
-					Interlocked.Exchange (ref _wrequest, null);
-				}
-				Interlocked.Exchange (ref disposed, 1);
-			}
-
-			base.Dispose (disposing);
-		}
-
-        internal virtual System.Net.HttpWebRequest CreateWebRequest(HttpRequestMessage request)
-		{
-            var wr = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(request.RequestUri);
-
-			wr.ConnectionGroupName = connectionGroupName;
-			wr.Method = request.Method.Method;
-			wr.ProtocolVersion = request.Version;
-
-			if (wr.ProtocolVersion == HttpVersion.Version10) {
-				wr.KeepAlive = request.Headers.ConnectionKeepAlive;
-			} else {
-				wr.KeepAlive = request.Headers.ConnectionClose != true;
-			}
-
-			wr.ServicePoint.Expect100Continue = request.Headers.ExpectContinue == true;
-
-			if (allowAutoRedirect) {
-				wr.AllowAutoRedirect = true;
-				wr.MaximumAutomaticRedirections = maxAutomaticRedirections;
-			} else {
-				wr.AllowAutoRedirect = false;
-			}
-
-			wr.AutomaticDecompression = automaticDecompression;
-			wr.PreAuthenticate = preAuthenticate;
-
-			if (useCookies) {
-				// It cannot be null or allowAutoRedirect won't work
-				wr.CookieContainer = CookieContainer;
-			}
-
-			if (useDefaultCredentials) {
-				wr.UseDefaultCredentials = true;
-			} else {
-				wr.Credentials = credentials;
-			}
-
-			if (useProxy) {
-				wr.Proxy = proxy;
-			}
-
-			// Add request headers
-			AddRequestHeaders(wr, request.Headers);
-
-			return wr;
-		}
-
-        HttpResponseMessage CreateResponseMessage(System.Net.HttpWebResponse wr, HttpRequestMessage requestMessage, CancellationToken cancellationToken)
-		{
-			var response = new HttpResponseMessage (wr.StatusCode);
-			response.RequestMessage = requestMessage;
-			response.ReasonPhrase = wr.StatusDescription;
-			response.Content = new StreamContent (wr.GetResponseStream (), cancellationToken);
-
-			var headers = wr.Headers;
-			for (int i = 0; i < headers.Count; ++i) {
-				var key = headers.GetKey(i);
-				var value = headers.GetValues (i);
-
-				HttpHeaders item_headers;
-				if (HttpHeaders.GetKnownHeaderKind (key) == Headers.HttpHeaderKind.Content)
-					item_headers = response.Content.Headers;
-				else
-					item_headers = response.Headers;
-					
-				item_headers.TryAddWithoutValidation (key, value);
-			}
-
-			return response;
-		}
-
-		protected internal override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
-		{
-			if (disposed != 0)
-				throw new ObjectDisposedException (GetType ().ToString ());
-
-			Interlocked.Exchange(ref sentRequest, 1);
-			_wrequest = CreateWebRequest (request);
-
-			Task intermediate;
-			if (request.Content != null) {
-				AddContentHeaders(wrequest, request.Content.Headers);
-
-				intermediate = wrequest.GetRequestStreamAsync ()
-					.Then (streamTask => request.Content.CopyToAsync (streamTask.Result));
-			} else if (HttpMethod.Post.Equals (request.Method) || HttpMethod.Put.Equals (request.Method) || HttpMethod.Delete.Equals (request.Method)) {
-				// Explicitly set this to make sure we're sending a "Content-Length: 0" header.
-				// This fixes the issue that's been reported on the forums:
-				// http://forums.xamarin.com/discussion/17770/length-required-error-in-http-post-since-latest-release
-				wrequest.ContentLength = 0;
-				intermediate = CompletedTask.Default;
-			} else {
-				intermediate = CompletedTask.Default;
-			}
-
-            System.Net.HttpWebResponse wresponse = null;
-			Func<Task<IDisposable>> resource =
-                () => Task.FromResult<IDisposable> (cancellationToken.Register (l => ((System.Net.HttpWebRequest) l).Abort (), wrequest));
-			Func<Task<IDisposable>, Task> body =
-				_ => {
-                    return wrequest.GetResponseAsync().Select(task => wresponse = (System.Net.HttpWebResponse)task.Result)
-                        .Catch<System.Net.WebException>(
-							(task, we) => {
-								if (we.Status == WebExceptionStatus.ProtocolError) {
-									// HttpClient shouldn't throw exceptions for these errors
-                                    wresponse = (System.Net.HttpWebResponse)we.Response;
-								} else if (we.Status != WebExceptionStatus.RequestCanceled) {
-									// propagate the antecedent
-									return task;
-								}
-
-								return CompletedTask.Default;
-							})
-						.Then (
-							task => {
-								if (cancellationToken.IsCancellationRequested) {
-									return CompletedTask.Canceled<HttpResponseMessage> ();
-								} else {
-									return CompletedTask.Default;
-								}
-							});
-				};
-
-			return intermediate
-				.Then (_ => TaskBlocks.Using (resource, body))
-				.Select (_ => CreateResponseMessage (wresponse, request, cancellationToken));
-		}
-
-        private static void AddRequestHeaders(System.Net.HttpWebRequest request, HttpRequestHeaders headers)
+        internal void EnsureModifiability ()
         {
-			foreach (var header in headers) {
-				switch (header.Key.ToLowerInvariant ()) {
-				case "accept":
-					request.Accept = headers.Accept.ToString ();
-					break;
+            if (sentRequest != 0)
+                throw new InvalidOperationException (
+                    "This instance has already started one or more requests. " +
+                    "Properties can only be modified before sending the first request.");
+        }
 
-				case "connection":
-					request.Connection = headers.Connection.ToString ();
-					break;
+        public bool AllowAutoRedirect {
+            get {
+                return allowAutoRedirect;
+            }
+            set {
+                EnsureModifiability ();
+                allowAutoRedirect = value;
+            }
+        }
 
-				case "date":
-					// .NET 3.5 does not expose a property for setting this reserved header
-					goto default;
+        public DecompressionMethods AutomaticDecompression {
+            get {
+                return automaticDecompression;
+            }
+            set {
+                EnsureModifiability ();
+                automaticDecompression = value;
+            }
+        }
 
-				case "expect":
-					request.Expect = headers.Expect.ToString ();
-					break;
+        public ClientCertificateOption ClientCertificateOptions {
+            get {
+                return certificate;
+            }
+            set {
+                EnsureModifiability ();
+                certificate = value;
+            }
+        }
 
-				case "host":
-					// .NET 3.5 does not expose a property for setting this reserved header
-					goto default;
+        public CookieContainer CookieContainer {
+            get {
+                return cookieContainer ?? (cookieContainer = new CookieContainer ());
+            }
+            set {
+                EnsureModifiability ();
+                cookieContainer = value;
+            }
+        }
 
-				case "if-modified-since":
-					request.IfModifiedSince = headers.IfModifiedSince.Value.UtcDateTime;
-					break;
+        public ICredentials Credentials {
+            get {
+                return credentials;
+            }
+            set {
+                EnsureModifiability ();
+                credentials = value;
+            }
+        }
 
-				case "range":
-					foreach (var range in headers.Range.Ranges) {
-						checked {
-							if (!string.IsNullOrEmpty(headers.Range.Unit)) {
-								if (range.To.HasValue)
-									request.AddRange (headers.Range.Unit, (int) range.From.Value, (int) range.To.Value);
-								else
-									request.AddRange (headers.Range.Unit, (int) range.From.Value);
-							} else {
-								if (range.To.HasValue)
-									request.AddRange ((int) range.From.Value, (int) range.To.Value);
-								else
-									request.AddRange ((int) range.From.Value);
-							}
-						}
-					}
+        public int MaxAutomaticRedirections {
+            get {
+                return maxAutomaticRedirections;
+            }
+            set {
+                EnsureModifiability ();
+                if (value <= 0)
+                    throw new ArgumentOutOfRangeException ();
 
-					break;
+                maxAutomaticRedirections = value;
+            }
+        }
 
-				case "referer":
-					request.Referer = headers.Referrer.OriginalString;
-					break;
+        public long MaxRequestContentBufferSize {
+            get {
+                return maxRequestContentBufferSize;
+            }
+            set {
+                EnsureModifiability ();
+                if (value < 0)
+                    throw new ArgumentOutOfRangeException ();
 
-				case "transfer-encoding":
-					request.TransferEncoding = headers.TransferEncoding.ToString ();
-					break;
+                maxRequestContentBufferSize = value;
+            }
+        }
 
-				case "user-agent":
-					request.UserAgent = headers.UserAgent.ToString ();
-					break;
+        public bool PreAuthenticate {
+            get {
+                return preAuthenticate;
+            }
+            set {
+                EnsureModifiability ();
+                preAuthenticate = value;
+            }
+        }
 
-				default:
-					foreach (var value in header.Value) {
-						request.Headers.Add (header.Key, value);
-					}
+        public IWebProxy Proxy {
+            get {
+                return proxy;
+            }
+            set {
+                EnsureModifiability ();
+                if (!UseProxy)
+                    throw new InvalidOperationException ();
 
-					break;
-				}
-			}
-		}
+                proxy = value;
+            }
+        }
 
-        private static void AddContentHeaders(System.Net.HttpWebRequest request, HttpContentHeaders headers)
+        public virtual bool SupportsAutomaticDecompression {
+            get {
+                return true;
+            }
+        }
+
+        public virtual bool SupportsProxy {
+            get {
+                return true;
+            }
+        }
+
+        public virtual bool SupportsRedirectConfiguration {
+            get {
+                return true;
+            }
+        }
+
+        public bool UseCookies {
+            get {
+                return useCookies;
+            }
+            set {
+                EnsureModifiability ();
+                useCookies = value;
+            }
+        }
+
+        public bool UseDefaultCredentials {
+            get {
+                return useDefaultCredentials;
+            }
+            set {
+                EnsureModifiability ();
+                useDefaultCredentials = value;
+            }
+        }
+
+        public bool UseProxy {
+            get {
+                return useProxy;
+            }
+            set {
+                EnsureModifiability ();
+                useProxy = value;
+            }
+        }
+
+        protected override void Dispose (bool disposing)
         {
-			foreach (var header in headers) {
-				switch (header.Key.ToLowerInvariant ()) {
-				case "content-length":
-					request.ContentLength = headers.ContentLength.Value;
-					break;
+            if (disposing && disposed != 1) {
+                Interlocked.Exchange(ref disposed, 1);
+                var closeConnectionGroupMethod = typeof(ServicePointManager).GetMethod("CloseConnectionGroup", BindingFlags.NonPublic
+                    | BindingFlags.Static);
 
-				case "content-type":
-					request.ContentType = headers.ContentType.ToString ();
-					break;
+                if (closeConnectionGroupMethod != null) {
+                    closeConnectionGroupMethod.Invoke(null, new object[] { connectionGroupName });
+                }
+            }
 
-				default:
-					foreach (var value in header.Value) {
-						request.Headers.Add (header.Key, value);
-					}
+            base.Dispose (disposing);
+        }
 
-					break;
-				}
-			}
-		}
-	}
+        internal virtual HttpWebRequest CreateWebRequest (HttpRequestMessage request)
+        {
+            var constructor = typeof(HttpWebRequest).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(Uri) },
+                                  null);
+            var wr = (HttpWebRequest)constructor.Invoke(new object[] { request.RequestUri });
+            wr.AllowWriteStreamBuffering = false;
+            var throwOnErrorProperty = typeof(HttpWebRequest).GetProperty("ThrowOnError", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (throwOnErrorProperty != null) {
+                throwOnErrorProperty.SetValue(wr, false, null);
+            }
+
+            wr.ConnectionGroupName = connectionGroupName;
+            wr.Method = request.Method.Method;
+            wr.ProtocolVersion = request.Version;
+
+            if (wr.ProtocolVersion == HttpVersion.Version10) {
+                wr.KeepAlive = request.Headers.ConnectionKeepAlive;
+            } else {
+                wr.KeepAlive = request.Headers.ConnectionClose != true;
+            }
+
+            wr.ServicePoint.Expect100Continue = request.Headers.ExpectContinue == true;
+
+            if (allowAutoRedirect) {
+                wr.AllowAutoRedirect = true;
+                wr.MaximumAutomaticRedirections = maxAutomaticRedirections;
+            } else {
+                wr.AllowAutoRedirect = false;
+            }
+
+            wr.AutomaticDecompression = automaticDecompression;
+            wr.PreAuthenticate = preAuthenticate;
+
+            if (useCookies) {
+                // It cannot be null or allowAutoRedirect won't work
+                wr.CookieContainer = CookieContainer;
+            }
+
+            if (useDefaultCredentials) {
+                wr.UseDefaultCredentials = true;
+            } else {
+                wr.Credentials = credentials;
+            }
+
+            if (useProxy) {
+                wr.Proxy = proxy;
+            }
+
+            // Add request headers
+            var headers = wr.Headers;
+            var addValueMethod = typeof(WebHeaderCollection).GetMethod("AddWithoutValidate", BindingFlags.NonPublic | BindingFlags.Instance);
+            foreach (var header in request.Headers) {
+                foreach (var value in header.Value) {
+                    addValueMethod.Invoke(headers, new object[] { header.Key, value });
+                }
+            }
+
+            return wr;
+        }
+
+        HttpResponseMessage CreateResponseMessage (HttpWebResponse wr, HttpRequestMessage requestMessage, CancellationToken cancellationToken)
+        {
+            var response = new HttpResponseMessage (wr.StatusCode);
+            response.RequestMessage = requestMessage;
+            response.ReasonPhrase = wr.StatusDescription;
+            response.Content = new StreamContent (wr.GetResponseStream (), cancellationToken);
+
+            var headers = wr.Headers;
+            for (int i = 0; i < headers.Count; ++i) {
+                var key = headers.GetKey(i);
+                var value = headers.GetValues (i);
+
+                HttpHeaders item_headers;
+                if (HttpHeaders.GetKnownHeaderKind (key) == Headers.HttpHeaderKind.Content)
+                    item_headers = response.Content.Headers;
+                else
+                    item_headers = response.Headers;
+
+                item_headers.TryAddWithoutValidation (key, value);
+            }
+
+            requestMessage.RequestUri = wr.ResponseUri;
+
+            return response;
+        }
+
+        protected async internal override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (disposed != 0)
+                throw new ObjectDisposedException (GetType ().ToString ());
+
+            Interlocked.Exchange(ref sentRequest, 1);
+            var wrequest = CreateWebRequest (request);
+            HttpWebResponse wresponse = null;
+
+            try {
+                using (cancellationToken.Register (l => ((HttpWebRequest)l).Abort (), wrequest)) {
+                    var content = request.Content;
+                    if (content != null) {
+                        var headers = wrequest.Headers;
+                        var addValueMethod = headers.GetType().GetMethod("AddWithoutValidate", BindingFlags.NonPublic|BindingFlags.Instance);
+
+                        foreach (var header in content.Headers) {
+                            foreach (var value in header.Value) {
+                                addValueMethod.Invoke(headers, new object[] { header.Key, value });
+                            }
+                        }
+
+                        //
+                        // Content length has to be set because HttpWebRequest is running without buffering
+                        //
+                        var contentLength = content.Headers.ContentLength;
+                        if (contentLength != null) {
+                            wrequest.ContentLength = contentLength.Value;
+                        } else {
+                            await content.LoadIntoBufferAsync (MaxRequestContentBufferSize).ConfigureAwait (false);
+                            wrequest.ContentLength = content.Headers.ContentLength.Value;
+                        }
+
+                        var resendContentFactoryField = typeof(HttpWebRequest).GetField("ResendContentFactory", BindingFlags.NonPublic
+                            | BindingFlags.Instance);
+                        if(resendContentFactoryField != null) {
+                            resendContentFactoryField.SetValue(wrequest, new Action<Stream>(content.CopyTo));
+                        }
+      
+                        var stream = await wrequest.GetRequestStreamAsync ().ConfigureAwait (false);
+                        await request.Content.CopyToAsync (stream).ConfigureAwait (false);
+                    } else if (HttpMethod.Post.Equals (request.Method) || HttpMethod.Put.Equals (request.Method) || HttpMethod.Delete.Equals (request.Method)) {
+                        // Explicitly set this to make sure we're sending a "Content-Length: 0" header.
+                        // This fixes the issue that's been reported on the forums:
+                        // http://forums.xamarin.com/discussion/17770/length-required-error-in-http-post-since-latest-release
+                        wrequest.ContentLength = 0;
+                    }
+
+                    wresponse = (HttpWebResponse)await wrequest.GetResponseAsync ().ConfigureAwait (false);
+                }
+            } catch (WebException we) {
+                if (we.Status == WebExceptionStatus.ProtocolError) {
+                    wresponse = (HttpWebResponse)we.Response;
+                } else if (we.Status != WebExceptionStatus.RequestCanceled) {
+                    throw;
+                }
+            }
+
+            if (cancellationToken.IsCancellationRequested) {
+                var cancelled = new TaskCompletionSource<HttpResponseMessage> ();
+                cancelled.SetCanceled ();
+                return await cancelled.Task;
+            }
+
+            return CreateResponseMessage (wresponse, request, cancellationToken);
+        }
+    }
 }

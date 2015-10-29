@@ -2,7 +2,7 @@
 // MultipartContent.cs
 //
 // Authors:
-//	Marek Safar  <marek.safar@gmail.com>
+//  Marek Safar  <marek.safar@gmail.com>
 //
 // Copyright (C) 2012 Xamarin Inc (http://www.xamarin.com)
 //
@@ -32,204 +32,190 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Http.Headers;
-using System.Net.Couchbase;
 using System.Linq;
 using System.Text;
-using Rackspace.Threading;
+using System.Net.Couchbase;
 
 namespace System.Net.Http
 {
-	public class MultipartContent : HttpContent, IEnumerable<HttpContent>
-	{
-		List<HttpContent> nested_content;
-		readonly string boundary;
+    public class MultipartContent : HttpContent, IEnumerable<HttpContent>
+    {
+        List<HttpContent> nested_content;
+        readonly string boundary;
 
-		public MultipartContent ()
-			: this ("mixed")
-		{
-		}
+        public MultipartContent ()
+            : this ("mixed")
+        {
+        }
 
-		public MultipartContent (string subtype)
-			: this (subtype, Guid.NewGuid ().ToString ("D", CultureInfo.InvariantCulture))
-		{
-		}
+        public MultipartContent (string subtype)
+            : this (subtype, Guid.NewGuid ().ToString ("D", CultureInfo.InvariantCulture))
+        {
+        }
 
-		public MultipartContent (string subtype, string boundary)
-		{
-			if (StringEx.IsNullOrWhiteSpace (subtype))
-				throw new ArgumentException ("boundary");
+        public MultipartContent (string subtype, string boundary)
+        {
+            if (string.IsNullOrEmpty (subtype) || subtype.Trim().Length == 0)
+                throw new ArgumentException ("boundary");
 
-			//
-			// The only mandatory parameter for the multipart Content-Type is the boundary parameter, which consists
-			// of 1 to 70 characters from a set of characters known to be very robust through email gateways,
-			// and NOT ending with white space
-			//
-			if (StringEx.IsNullOrWhiteSpace (boundary))
-				throw new ArgumentException ("boundary");
+            //
+            // The only mandatory parameter for the multipart Content-Type is the boundary parameter, which consists
+            // of 1 to 70 characters from a set of characters known to be very robust through email gateways,
+            // and NOT ending with white space
+            //
+            if (string.IsNullOrEmpty (boundary) || boundary.Trim().Length == 0)
+                throw new ArgumentException ("boundary");
 
-			if (boundary.Length > 70)
-				throw new ArgumentOutOfRangeException ("boundary");
+            if (boundary.Length > 70)
+                throw new ArgumentOutOfRangeException ("boundary");
 
-            if (boundary[boundary.Length-1] == ' ' || !IsValidRFC2049 (boundary))
-				throw new ArgumentException ("boundary");
+            if (boundary.Last () == ' ' || !IsValidRFC2049 (boundary))
+                throw new ArgumentException ("boundary");
 
-			this.boundary = boundary;
-			this.nested_content = new List<HttpContent> (2);
+            this.boundary = boundary;
+            this.nested_content = new List<HttpContent> (2);
 
-			Headers.ContentType = new MediaTypeHeaderValue ("multipart/" + subtype) {
-				Parameters = { new NameValueHeaderValue ("boundary", "\"" + boundary + "\"") }
-			};
-		}
+            Headers.ContentType = new MediaTypeHeaderValue ("multipart/" + subtype) {
+                Parameters = { new NameValueHeaderValue ("boundary", "\"" + boundary + "\"") }
+            };
+        }
 
-		static bool IsValidRFC2049 (string s)
-		{
-			foreach (char c in s) {
-				if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
-					continue;
+        static bool IsValidRFC2049 (string s)
+        {
+            foreach (char c in s) {
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
+                    continue;
 
-				switch (c) {
-				case '\'': case '(': case ')': case '+': case ',':
-				case '-': case '.': case '/': case ':': case '=':
-				case '?':
-					continue;
-				}
+                switch (c) {
+                    case '\'': case '(': case ')': case '+': case ',':
+                    case '-': case '.': case '/': case ':': case '=':
+                    case '?':
+                        continue;
+                }
 
-				return false;
-			}
+                return false;
+            }
 
-			return true;
-		}
+            return true;
+        }
 
-		public virtual void Add (HttpContent content)
-		{
-			if (content == null)
-				throw new ArgumentNullException ("content");
+        public virtual void Add (HttpContent content)
+        {
+            if (content == null)
+                throw new ArgumentNullException ("content");
 
-			if (nested_content == null)
-				nested_content = new List<HttpContent> ();
+            if (nested_content == null)
+                nested_content = new List<HttpContent> ();
 
-			nested_content.Add (content);
-		}
+            nested_content.Add (content);
+        }
 
-		protected override void Dispose (bool disposing)
-		{
-			if (disposing) {
-				foreach (var item in nested_content) {
-					item.Dispose ();
-				}
-				
-				nested_content = null;
-			}
-			
-			base.Dispose (disposing);
-		}
+        protected override void Dispose (bool disposing)
+        {
+            if (disposing) {
+                foreach (var item in nested_content) {
+                    item.Dispose ();
+                }
 
-        protected internal override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-		{
-			// RFC 2046
-			//
-			// The Content-Type field for multipart entities requires one parameter,
-			// "boundary". The boundary delimiter line is then defined as a line
-			// consisting entirely of two hyphen characters ("-", decimal value 45)
-			// followed by the boundary parameter value from the Content-Type header
-			// field, optional linear whitespace, and a terminating CRLF.
-			//
+                nested_content = null;
+            }
 
-			byte[] buffer;
-			var sb = new StringBuilder ();
-			sb.Append ('-').Append ('-');
-			sb.Append (boundary);
-			sb.Append ('\r').Append ('\n');
+            base.Dispose (disposing);
+        }
 
-			int i = 0;
-			Func<bool> condition = () => i < nested_content.Count;
-			Func<Task> body =
-				() => {
-					var c = nested_content [i];
-					
-					foreach (var h in c.Headers) {
-						sb.Append (h.Key);
-						sb.Append (':').Append (' ');
-						foreach (var v in h.Value) {
-							sb.Append (v);
-						}
-						sb.Append ('\r').Append ('\n');
-					}
-					sb.Append ('\r').Append ('\n');
-					
-					buffer = Encoding.ASCII.GetBytes (sb.ToString ());
-					sb.Length = 0;
+        protected internal override async Task SerializeToStreamAsync (Stream stream, TransportContext context)
+        {
+            // RFC 2046
+            //
+            // The Content-Type field for multipart entities requires one parameter,
+            // "boundary". The boundary delimiter line is then defined as a line
+            // consisting entirely of two hyphen characters ("-", decimal value 45)
+            // followed by the boundary parameter value from the Content-Type header
+            // field, optional linear whitespace, and a terminating CRLF.
+            //
 
-					return stream.WriteAsync (buffer, 0, buffer.Length)
-						.Then (_ => c.SerializeToStreamAsync (stream, context))
-						.Select (
-							_ => {
-								if (i != nested_content.Count - 1) {
-									sb.Append ('\r').Append ('\n');
-									sb.Append ('-').Append ('-');
-									sb.Append (boundary);
-									sb.Append ('\r').Append ('\n');
-								}
+            byte[] buffer;
+            var sb = new StringBuilder ();
+            sb.Append ('-').Append ('-');
+            sb.Append (boundary);
+            sb.Append ('\r').Append ('\n');
 
-								i++;
-							});
-				};
+            for (int i = 0; i < nested_content.Count; i++) {
+                var c = nested_content [i];
 
-			Func<Task, Task> continuationFunction =
-				task => {
-					sb.Append ('\r').Append ('\n');
-					sb.Append ('-').Append ('-');
-					sb.Append (boundary);
-					sb.Append ('-').Append ('-');
-					sb.Append ('\r').Append ('\n');
+                foreach (var h in c.Headers) {
+                    sb.Append (h.Key);
+                    sb.Append (':').Append (' ');
+                    foreach (var v in h.Value) {
+                        sb.Append (v);
+                    }
+                    sb.Append ('\r').Append ('\n');
+                }
+                sb.Append ('\r').Append ('\n');
 
-					buffer = Encoding.ASCII.GetBytes (sb.ToString ());
-					return stream.WriteAsync (buffer, 0, buffer.Length);
-				};
+                buffer = Encoding.ASCII.GetBytes (sb.ToString ());
+                sb = new StringBuilder();
+                await Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).ConfigureAwait(false);
 
-			return TaskBlocks.While (condition, body)
-				.Then (continuationFunction);
-		}
-		
-		protected internal override bool TryComputeLength (out long length)
-		{
-			length = 12 + 2 * boundary.Length;
-			
-			for (int i = 0; i < nested_content.Count; i++) {
-				var c = nested_content [i];
-				foreach (var h in c.Headers) {
-					length += h.Key.Length;
-					length += 4;
-						
-					foreach (var v in h.Value) {
-						length += v.Length;
-					}
-				}
-					
-				long l;
-				if (!c.TryComputeLength (out l))
-					return false;
+                await c.SerializeToStreamAsync (stream, context).ConfigureAwait (false);
 
-				length += 2;
-				length += l;
-					
-				if (i != nested_content.Count - 1) {
-					length += 6;
-					length += boundary.Length;
-				}
-			}
+                if (i != nested_content.Count - 1) {
+                    sb.Append ('\r').Append ('\n');
+                    sb.Append ('-').Append ('-');
+                    sb.Append (boundary);
+                    sb.Append ('\r').Append ('\n');
+                }
+            }
 
-			return true;
-		}
+            sb.Append ('\r').Append ('\n');
+            sb.Append ('-').Append ('-');
+            sb.Append (boundary);
+            sb.Append ('-').Append ('-');
+            sb.Append ('\r').Append ('\n');
 
-		public IEnumerator<HttpContent> GetEnumerator ()
-		{
-			return nested_content.GetEnumerator ();
-		}
+            buffer = Encoding.ASCII.GetBytes (sb.ToString ());
+            await Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).ConfigureAwait(false);
+        }
 
-		IEnumerator IEnumerable.GetEnumerator ()
-		{
-			return nested_content.GetEnumerator ();
-		}
-	}
+        protected internal override bool TryComputeLength (out long length)
+        {
+            length = 12 + 2 * boundary.Length;
+
+            for (int i = 0; i < nested_content.Count; i++) {
+                var c = nested_content [i];
+                foreach (var h in c.Headers) {
+                    length += h.Key.Length;
+                    length += 4;
+
+                    foreach (var v in h.Value) {
+                        length += v.Length;
+                    }
+                }
+
+                long l;
+                if (!c.TryComputeLength (out l))
+                    return false;
+
+                length += 2;
+                length += l;
+
+                if (i != nested_content.Count - 1) {
+                    length += 6;
+                    length += boundary.Length;
+                }
+            }
+
+            return true;
+        }
+
+        public IEnumerator<HttpContent> GetEnumerator ()
+        {
+            return nested_content.GetEnumerator ();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator ()
+        {
+            return nested_content.GetEnumerator ();
+        }
+    }
 }

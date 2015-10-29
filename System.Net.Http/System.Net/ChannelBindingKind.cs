@@ -28,7 +28,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-namespace System.Security.Authentication.ExtendedProtection.Couchbase
+namespace System.Security.Authentication.ExtendedProtection
 {
     public enum ChannelBindingKind
     {

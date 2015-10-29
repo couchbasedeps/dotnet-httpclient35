@@ -26,9 +26,9 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-using System.Security.Authentication.ExtendedProtection.Couchbase;
+using System.Security.Authentication.ExtendedProtection;
 
-namespace System.Net.Couchbase
+namespace System.Net
 {
     public abstract class TransportContext
     {

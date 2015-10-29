@@ -31,7 +31,7 @@
 using System;
 using Microsoft.Win32.SafeHandles;
 
-namespace System.Security.Authentication.ExtendedProtection.Couchbase
+namespace System.Security.Authentication.ExtendedProtection
 {
     public abstract class ChannelBinding : SafeHandleZeroOrMinusOneIsInvalid
     {

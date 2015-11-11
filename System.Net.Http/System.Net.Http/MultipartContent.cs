@@ -175,8 +175,7 @@ namespace System.Net.Http
             sb.Append ('\r').Append ('\n');
 
             buffer = Encoding.ASCII.GetBytes (sb.ToString ());
-            Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).Await();
-            return Task.FromResult(true);
+            return Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length);
         }
 
         #else

@@ -267,18 +267,18 @@ namespace System.Net.Http
 
         Task<HttpResponseMessage> SendAsyncWorker (HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
         {
-            using (var lcts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken)) {
+            var lcts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
                 lcts.CancelAfter(timeout);
 
-                var task = base.SendAsync(request, lcts.Token);
-                if (task == null)
-                    throw new InvalidOperationException("Handler failed to return a value");
+            var task = base.SendAsync(request, lcts.Token);
+            if (task == null)
+                throw new InvalidOperationException("Handler failed to return a value");
 
-                var response = task.Await();
+            return task.ContinueWith(t => 
+            {
+                var response = task.Result;
                 if (response == null)
                     throw new InvalidOperationException("Handler failed to return a response");
-
-                System.Diagnostics.Trace.WriteLine("GOT A RESPONSE IN SendAsyncWorker");
 
                 //
                 // Read the content when default HttpCompletionOption.ResponseContentRead is set
@@ -287,57 +287,75 @@ namespace System.Net.Http
                     response.Content.LoadIntoBufferAsync(MaxResponseContentBufferSize).Await();
                 }
 
-                System.Diagnostics.Trace.WriteLine("Returning response from SendAsyncWorker");
-                return Task.FromResult(response);
-            }
+                lcts.Dispose();
+                return response;
+            });
         }
 
         public Task<byte[]> GetByteArrayAsync (string requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsByteArrayAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsByteArrayAsync ().Await();
+                }
+            });
         }
 
         public Task<byte[]> GetByteArrayAsync (Uri requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsByteArrayAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsByteArrayAsync ().Await();
+                }
+            });
         }
 
         public Task<Stream> GetStreamAsync (string requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsStreamAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsStreamAsync ().Await();
+                }
+            });
         }
 
         public Task<Stream> GetStreamAsync (Uri requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsStreamAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsStreamAsync ().Await();
+                }
+            });
         }
 
         public Task<string> GetStringAsync (string requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsStringAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsStringAsync ().Await();
+                }
+            });
         }
 
         public Task<string> GetStringAsync (Uri requestUri)
         {
-            using (var resp = GetAsync (requestUri, HttpCompletionOption.ResponseContentRead).Await()) {
-                resp.EnsureSuccessStatusCode ();
-                return Task.FromResult(resp.Content.ReadAsStringAsync ().Await());
-            }
+            return GetAsync(requestUri, HttpCompletionOption.ResponseContentRead).ContinueWith(t =>
+            {
+                using(var resp = t.Result) {
+                    resp.EnsureSuccessStatusCode ();
+                    return resp.Content.ReadAsStringAsync ().Await();
+                }
+            });
         }
 
         #else
@@ -401,8 +419,6 @@ namespace System.Net.Http
                 if (response == null)
                     throw new InvalidOperationException ("Handler failed to return a response");
 
-                System.Diagnostics.Trace.WriteLine("GOT A RESPONSE IN SendAsyncWorker");
-
                 //
                 // Read the content when default HttpCompletionOption.ResponseContentRead is set
                 //
@@ -410,7 +426,6 @@ namespace System.Net.Http
                     await response.Content.LoadIntoBufferAsync (MaxResponseContentBufferSize).ConfigureAwait(false);
                 }
 
-                System.Diagnostics.Trace.WriteLine("Returning response from SendAsyncWorker");
                 return response;
             }
         }

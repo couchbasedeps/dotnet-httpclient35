@@ -355,13 +355,6 @@ namespace System.Net.Http
                             wrequest.ContentLength = content.Headers.ContentLength.Value;
                         }
 
-                        var resendContentFactoryField = typeof(HttpWebRequest).GetField("ResendContentFactory", BindingFlags.NonPublic
-                                                    | BindingFlags.Instance);
-                        if (resendContentFactoryField != null) {
-                            resendContentFactoryField.SetValue(wrequest, new Action<Stream>(content.CopyTo));
-                        }
-  
-
                         var stream = wrequest.GetRequestStreamAsync().Await();
                         request.Content.CopyToAsync(stream).Await();
                     } else if (HttpMethod.Post.Equals(request.Method) || HttpMethod.Put.Equals(request.Method) || HttpMethod.Delete.Equals(request.Method)) {

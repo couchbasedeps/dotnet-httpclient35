@@ -322,7 +322,8 @@ namespace System.Net.Http
             return response;
         }
 
-        protected async internal override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+        #if UNITY
+        protected internal override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (disposed != 0)
                 throw new ObjectDisposedException (GetType ().ToString ());
@@ -330,13 +331,12 @@ namespace System.Net.Http
             Interlocked.Exchange(ref sentRequest, 1);
             var wrequest = CreateWebRequest (request);
             HttpWebResponse wresponse = null;
-
             try {
-                using (cancellationToken.Register (l => ((HttpWebRequest)l).Abort (), wrequest)) {
+                using (cancellationToken.Register(l => ((HttpWebRequest)l).Abort(), wrequest)) {
                     var content = request.Content;
                     if (content != null) {
                         var headers = wrequest.Headers;
-                        var addValueMethod = headers.GetType().GetMethod("AddWithoutValidate", BindingFlags.NonPublic|BindingFlags.Instance);
+                        var addValueMethod = headers.GetType().GetMethod("AddWithoutValidate", BindingFlags.NonPublic | BindingFlags.Instance);
 
                         foreach (var header in content.Headers) {
                             foreach (var value in header.Value) {
@@ -351,28 +351,40 @@ namespace System.Net.Http
                         if (contentLength != null) {
                             wrequest.ContentLength = contentLength.Value;
                         } else {
-                            await content.LoadIntoBufferAsync (MaxRequestContentBufferSize).ConfigureAwait (false);
+                            content.LoadIntoBufferAsync(MaxRequestContentBufferSize).Await();
                             wrequest.ContentLength = content.Headers.ContentLength.Value;
                         }
 
                         var resendContentFactoryField = typeof(HttpWebRequest).GetField("ResendContentFactory", BindingFlags.NonPublic
-                            | BindingFlags.Instance);
-                        if(resendContentFactoryField != null) {
+                                                    | BindingFlags.Instance);
+                        if (resendContentFactoryField != null) {
                             resendContentFactoryField.SetValue(wrequest, new Action<Stream>(content.CopyTo));
                         }
-      
-                        var stream = await wrequest.GetRequestStreamAsync ().ConfigureAwait (false);
-                        await request.Content.CopyToAsync (stream).ConfigureAwait (false);
-                    } else if (HttpMethod.Post.Equals (request.Method) || HttpMethod.Put.Equals (request.Method) || HttpMethod.Delete.Equals (request.Method)) {
+  
+
+                        var stream = wrequest.GetRequestStreamAsync().Await();
+                        request.Content.CopyToAsync(stream).Await();
+                    } else if (HttpMethod.Post.Equals(request.Method) || HttpMethod.Put.Equals(request.Method) || HttpMethod.Delete.Equals(request.Method)) {
                         // Explicitly set this to make sure we're sending a "Content-Length: 0" header.
                         // This fixes the issue that's been reported on the forums:
                         // http://forums.xamarin.com/discussion/17770/length-required-error-in-http-post-since-latest-release
                         wrequest.ContentLength = 0;
                     }
-
-                    wresponse = (HttpWebResponse)await wrequest.GetResponseAsync ().ConfigureAwait (false);
+                    
+                    wresponse = (HttpWebResponse)wrequest.GetResponseAsync().Await();
                 }
             } catch (WebException we) {
+                if (we.Status == WebExceptionStatus.ProtocolError) {
+                    wresponse = (HttpWebResponse)we.Response;
+                } else if (we.Status != WebExceptionStatus.RequestCanceled) {
+                    throw;
+                }
+            } catch (AggregateException e) {
+                var we = e.InnerException as WebException;
+                if (we == null) {
+                    throw;
+                }
+
                 if (we.Status == WebExceptionStatus.ProtocolError) {
                     wresponse = (HttpWebResponse)we.Response;
                 } else if (we.Status != WebExceptionStatus.RequestCanceled) {
@@ -381,12 +393,95 @@ namespace System.Net.Http
             }
 
             if (cancellationToken.IsCancellationRequested) {
-                var cancelled = new TaskCompletionSource<HttpResponseMessage> ();
-                cancelled.SetCanceled ();
+                var cancelled = new TaskCompletionSource<HttpResponseMessage>();
+                cancelled.SetCanceled();
+                return cancelled.Task;
+            }
+
+            return Task.FromResult(CreateResponseMessage(wresponse, request, cancellationToken));
+        }
+
+        #else
+
+        protected async internal override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (disposed != 0)
+                throw new ObjectDisposedException (GetType ().ToString ());
+
+            Interlocked.Exchange(ref sentRequest, 1);
+            var wrequest = CreateWebRequest (request);
+            HttpWebResponse wresponse = null;
+
+            try {
+                using (cancellationToken.Register(l => ((HttpWebRequest)l).Abort(), wrequest)) {
+                    var content = request.Content;
+                    if (content != null) {
+                        var headers = wrequest.Headers;
+                        var addValueMethod = headers.GetType().GetMethod("AddWithoutValidate", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                        foreach (var header in content.Headers) {
+                            foreach (var value in header.Value) {
+                                addValueMethod.Invoke(headers, new object[] { header.Key, value });
+                            }
+                        }
+
+                        //
+                        // Content length has to be set because HttpWebRequest is running without buffering
+                        //
+                        var contentLength = content.Headers.ContentLength;
+                        if (contentLength != null) {
+                            wrequest.ContentLength = contentLength.Value;
+                        } else {
+                            await content.LoadIntoBufferAsync(MaxRequestContentBufferSize).ConfigureAwait(false);
+                            wrequest.ContentLength = content.Headers.ContentLength.Value;
+                        }
+
+                        var resendContentFactoryField = typeof(HttpWebRequest).GetField("ResendContentFactory", BindingFlags.NonPublic
+                            | BindingFlags.Instance);
+                        if (resendContentFactoryField != null) {
+                            resendContentFactoryField.SetValue(wrequest, new Action<Stream>(content.CopyTo));
+                        }
+
+
+                        var stream = await wrequest.GetRequestStreamAsync().ConfigureAwait(false);
+                        await request.Content.CopyToAsync(stream).ConfigureAwait(false);
+                    } else if (HttpMethod.Post.Equals(request.Method) || HttpMethod.Put.Equals(request.Method) || HttpMethod.Delete.Equals(request.Method)) {
+                        // Explicitly set this to make sure we're sending a "Content-Length: 0" header.
+                        // This fixes the issue that's been reported on the forums:
+                        // http://forums.xamarin.com/discussion/17770/length-required-error-in-http-post-since-latest-release
+                        wrequest.ContentLength = 0;
+                    }
+
+                    wresponse = (HttpWebResponse)await wrequest.GetResponseAsync().ConfigureAwait(false);
+                }
+            } catch (WebException we) {
+                if (we.Status == WebExceptionStatus.ProtocolError) {
+                    wresponse = (HttpWebResponse)we.Response;
+                } else if (we.Status != WebExceptionStatus.RequestCanceled) {
+                    throw;
+                }
+            } catch (AggregateException e) {
+                var we = e.InnerException as WebException;
+                if (we == null) {
+                    throw;
+                }
+
+                if (we.Status == WebExceptionStatus.ProtocolError) {
+                    wresponse = (HttpWebResponse)we.Response;
+                } else if (we.Status != WebExceptionStatus.RequestCanceled) {
+                    throw;
+                }
+            }
+
+            if (cancellationToken.IsCancellationRequested) {
+                var cancelled = new TaskCompletionSource<HttpResponseMessage>();
+                cancelled.SetCanceled();
                 return await cancelled.Task;
             }
 
-            return CreateResponseMessage (wresponse, request, cancellationToken);
+            return CreateResponseMessage(wresponse, request, cancellationToken);
         }
+
+        #endif
     }
 }

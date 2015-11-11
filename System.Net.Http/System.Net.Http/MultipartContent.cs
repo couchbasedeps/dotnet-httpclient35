@@ -34,7 +34,6 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Linq;
 using System.Text;
-using System.Net.Couchbase;
 
 namespace System.Net.Http
 {
@@ -123,6 +122,65 @@ namespace System.Net.Http
             base.Dispose (disposing);
         }
 
+        #if UNITY
+
+        protected internal override Task SerializeToStreamAsync (Stream stream, TransportContext context)
+        {
+            // RFC 2046
+            //
+            // The Content-Type field for multipart entities requires one parameter,
+            // "boundary". The boundary delimiter line is then defined as a line
+            // consisting entirely of two hyphen characters ("-", decimal value 45)
+            // followed by the boundary parameter value from the Content-Type header
+            // field, optional linear whitespace, and a terminating CRLF.
+            //
+
+            byte[] buffer;
+            var sb = new StringBuilder ();
+            sb.Append ('-').Append ('-');
+            sb.Append (boundary);
+            sb.Append ('\r').Append ('\n');
+
+            for (int i = 0; i < nested_content.Count; i++) {
+                var c = nested_content [i];
+
+                foreach (var h in c.Headers) {
+                    sb.Append (h.Key);
+                    sb.Append (':').Append (' ');
+                    foreach (var v in h.Value) {
+                        sb.Append (v);
+                    }
+                    sb.Append ('\r').Append ('\n');
+                }
+                sb.Append ('\r').Append ('\n');
+
+                buffer = Encoding.ASCII.GetBytes (sb.ToString ());
+                sb = new StringBuilder();
+                Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).Await();
+
+                c.SerializeToStreamAsync(stream, context).Await();
+
+                if (i != nested_content.Count - 1) {
+                    sb.Append ('\r').Append ('\n');
+                    sb.Append ('-').Append ('-');
+                    sb.Append (boundary);
+                    sb.Append ('\r').Append ('\n');
+                }
+            }
+
+            sb.Append ('\r').Append ('\n');
+            sb.Append ('-').Append ('-');
+            sb.Append (boundary);
+            sb.Append ('-').Append ('-');
+            sb.Append ('\r').Append ('\n');
+
+            buffer = Encoding.ASCII.GetBytes (sb.ToString ());
+            Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).Await();
+            return Task.FromResult(true);
+        }
+
+        #else
+
         protected internal override async Task SerializeToStreamAsync (Stream stream, TransportContext context)
         {
             // RFC 2046
@@ -176,6 +234,8 @@ namespace System.Net.Http
             buffer = Encoding.ASCII.GetBytes (sb.ToString ());
             await Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).ConfigureAwait(false);
         }
+
+        #endif
 
         protected internal override bool TryComputeLength (out long length)
         {

@@ -28,7 +28,6 @@
 
 using System.IO;
 using System.Threading.Tasks;
-using System.Net.Couchbase;
 
 namespace System.Net.Http
 {

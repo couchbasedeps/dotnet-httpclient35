@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9862694D-E4FA-418B-8692-A0280FEDDF36}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <NoWarn>1699</NoWarn>
+    <NoConfig>True</NoConfig>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <AssemblyName>System.Net.Http.Net35</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">.\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+    <ReleaseVersion>1.1</ReleaseVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>True</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>False</Optimize>
+    <DefineConstants>DEBUG;TRACE;NET_1_1;NET_2_0;NET_3_0;NET_3_5;NET_4_0;NET_4_5;UNITY</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <OutputPath>bin\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>True</Optimize>
+    <DefineConstants>NET_1_1;NET_2_0;NET_3_0;NET_3_5;NET_4_0;NET_4_5</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile Condition="'$(KeyConfiguration)' == 'Final'">..\Build\keys\HttpClient35.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile Condition="'$(KeyConfiguration)' != 'Final'">..\Build\keys\HttpClient35.dev.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\build\common\Consts.cs" />
+    <Compile Include="Assembly\AssemblyInfo.cs" />
+    <Compile Include="System.Net.Http.Headers\AuthenticationHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\CacheControlHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\CollectionExtensions.cs" />
+    <Compile Include="System.Net.Http.Headers\CollectionParser.cs" />
+    <Compile Include="System.Net.Http.Headers\ContentDispositionHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\ContentRangeHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\EntityTagHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\HashCodeCalculator.cs" />
+    <Compile Include="System.Net.Http.Headers\HeaderInfo.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpContentHeaders.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpHeaderKind.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpHeaders.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpHeaderValueCollection.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpRequestHeaders.cs" />
+    <Compile Include="System.Net.Http.Headers\HttpResponseHeaders.cs" />
+    <Compile Include="System.Net.Http.Headers\Lexer.cs" />
+    <Compile Include="System.Net.Http.Headers\MediaTypeHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\MediaTypeWithQualityHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\NameValueHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\NameValueWithParametersHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\Parser.cs" />
+    <Compile Include="System.Net.Http.Headers\ProductHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\ProductInfoHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\QualityValue.cs" />
+    <Compile Include="System.Net.Http.Headers\RangeConditionHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\RangeHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\RangeItemHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\RetryConditionHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\StringWithQualityHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\TransferCodingHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\TransferCodingWithQualityHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\ViaHeaderValue.cs" />
+    <Compile Include="System.Net.Http.Headers\WarningHeaderValue.cs" />
+    <Compile Include="System.Net.Http\ByteArrayContent.cs" />
+    <Compile Include="System.Net.Http\ClientCertificateOption.cs" />
+    <Compile Include="System.Net.Http\DelegatingHandler.cs" />
+    <Compile Include="System.Net.Http\FormUrlEncodedContent.cs" />
+    <Compile Include="System.Net.Http\HttpClient.cs" />
+    <Compile Include="System.Net.Http\HttpClientHandler.cs" />
+    <Compile Include="System.Net.Http\HttpCompletionOption.cs" />
+    <Compile Include="System.Net.Http\HttpContent.cs" />
+    <Compile Include="System.Net.Http\HttpMessageHandler.cs" />
+    <Compile Include="System.Net.Http\HttpMessageInvoker.cs" />
+    <Compile Include="System.Net.Http\HttpMethod.cs" />
+    <Compile Include="System.Net.Http\HttpRequestException.cs" />
+    <Compile Include="System.Net.Http\HttpRequestMessage.cs" />
+    <Compile Include="System.Net.Http\HttpResponseMessage.cs" />
+    <Compile Include="System.Net.Http\MessageProcessingHandler.cs" />
+    <Compile Include="System.Net.Http\MultipartContent.cs" />
+    <Compile Include="System.Net.Http\MultipartFormDataContent.cs" />
+    <Compile Include="System.Net.Http\StreamContent.cs" />
+    <Compile Include="System.Net.Http\StringContent.cs" />
+    <Compile Include="System.Net.Http\StringEx.cs" />
+    <Compile Include="System.Net\ChannelBinding.cs" />
+    <Compile Include="System.Net\ChannelBindingKind.cs" />
+    <Compile Include="System.Net\TransportContext.cs" />
+    <Compile Include="UnityExt.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="..\Build\keys\HttpClient35.dev.snk">
+      <Link>HttpClient35.dev.snk</Link>
+    </None>
+    <None Include="..\Build\keys\HttpClient35.snk">
+      <Link>HttpClient35.snk</Link>
+    </None>
+    <None Include="packages.System.Net.Http-net_4_5.config" />
+    <None Include="Rackspace.HttpClient35.nuspec" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="..\Rackspace.Threading\Rackspace.Threading\Rackspace.Threading.Unity.csproj">
+      <Project>{52CA4A3B-F296-4489-B5F0-AD375D039B35}</Project>
+      <Name>Rackspace.Threading.Unity</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rackspace.Threading\System.Threading.Tasks.Net35\System.Threading.Tasks.Unity.csproj">
+      <Project>{DCB5D745-525C-46A1-BFC0-E12F87AB6165}</Project>
+      <Name>System.Threading.Tasks.Unity</Name>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

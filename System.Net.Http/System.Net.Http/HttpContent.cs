@@ -30,7 +30,6 @@ using System.Net.Http.Headers;
 using System.IO;
 using System.Threading.Tasks;
 using System.Text;
-using System.Net.Couchbase;
 
 namespace System.Net.Http
 {
@@ -104,10 +103,18 @@ namespace System.Net.Http
             return SerializeToStreamAsync (stream, context);
         }
 
-        protected async virtual Task<Stream> CreateContentReadStreamAsync ()
+        #if !UNITY
+        async
+        #endif
+        protected virtual Task<Stream> CreateContentReadStreamAsync ()
         {
-            await LoadIntoBufferAsync ().ConfigureAwait (false);
+            #if !UNITY
+            await LoadIntoBufferAsync().ConfigureAwait(false);
             return buffer;
+            #else
+            LoadIntoBufferAsync().Await();
+            return Task.FromResult<Stream>(buffer);
+            #endif
         }
 
         static FixedMemoryStream CreateFixedMemoryStream (long maxBufferSize)
@@ -135,6 +142,65 @@ namespace System.Net.Http
             return LoadIntoBufferAsync (int.MaxValue);
         }
 
+        #if UNITY
+
+        public Task LoadIntoBufferAsync (long maxBufferSize)
+        {
+            if (disposed)
+                throw new ObjectDisposedException (GetType ().ToString ());
+
+            if (buffer != null)
+                return Task.FromResult(false);
+
+            buffer = CreateFixedMemoryStream (maxBufferSize);
+            SerializeToStreamAsync(buffer, null).Await();
+            buffer.Seek (0, SeekOrigin.Begin);
+            return Task.FromResult(true);
+        }
+
+        public Task<Stream> ReadAsStreamAsync ()
+        {
+            if (disposed)
+                throw new ObjectDisposedException(GetType().ToString());
+
+            if (buffer != null)
+                return Task.FromResult<Stream>(new MemoryStream(buffer.GetBuffer(), 0, (int)buffer.Length, false));
+
+            if (stream == null)
+                stream = CreateContentReadStreamAsync().Await();
+
+            return Task.FromResult(stream);
+        }
+
+        public Task<byte[]> ReadAsByteArrayAsync ()
+        {
+            LoadIntoBufferAsync().Await();
+            return Task.FromResult(buffer.ToArray());
+        }
+
+        public Task<string> ReadAsStringAsync ()
+        {
+            LoadIntoBufferAsync().Await();
+            if (buffer.Length == 0)
+                return Task.FromResult(string.Empty);
+
+            var buf = buffer.GetBuffer();
+            var buf_length = (int)buffer.Length;
+            int preambleLength = 0;
+            Encoding encoding;
+
+            if (headers != null && headers.ContentType != null && headers.ContentType.CharSet != null) {
+                encoding = Encoding.GetEncoding(headers.ContentType.CharSet);
+                preambleLength = StartsWith(buf, buf_length, encoding.GetPreamble());
+            } else {
+                encoding = GetEncodingFromBuffer(buf, buf_length, ref preambleLength) ?? Encoding.UTF8;
+            }
+
+            return Task.FromResult(encoding.GetString(buf, preambleLength, buf_length - preambleLength));
+        }
+
+        #else
+            
         public async Task LoadIntoBufferAsync (long maxBufferSize)
         {
             if (disposed)
@@ -144,50 +210,52 @@ namespace System.Net.Http
                 return;
 
             buffer = CreateFixedMemoryStream (maxBufferSize);
-            await SerializeToStreamAsync (buffer, null).ConfigureAwait (false);
+            await SerializeToStreamAsync(buffer, null).ConfigureAwait(false);
             buffer.Seek (0, SeekOrigin.Begin);
         }
-
+            
         public async Task<Stream> ReadAsStreamAsync ()
         {
             if (disposed)
-                throw new ObjectDisposedException (GetType ().ToString ());
+                throw new ObjectDisposedException(GetType().ToString());
 
             if (buffer != null)
-                return new MemoryStream (buffer.GetBuffer (), 0, (int)buffer.Length, false);
+                return new MemoryStream(buffer.GetBuffer(), 0, (int)buffer.Length, false);
 
             if (stream == null)
-                stream = await CreateContentReadStreamAsync ().ConfigureAwait (false);
+                stream = await CreateContentReadStreamAsync().ConfigureAwait(false);
 
             return stream;
         }
-
+            
         public async Task<byte[]> ReadAsByteArrayAsync ()
         {
-            await LoadIntoBufferAsync ().ConfigureAwait (false);
-            return buffer.ToArray ();
+            await LoadIntoBufferAsync().ConfigureAwait(false);
+            return buffer.ToArray();
         }
-
+            
         public async Task<string> ReadAsStringAsync ()
         {
-            await LoadIntoBufferAsync ().ConfigureAwait (false);
+            await LoadIntoBufferAsync().ConfigureAwait(false);
             if (buffer.Length == 0)
                 return string.Empty;
 
-            var buf = buffer.GetBuffer ();
-            var buf_length = (int) buffer.Length;
+            var buf = buffer.GetBuffer();
+            var buf_length = (int)buffer.Length;
             int preambleLength = 0;
             Encoding encoding;
 
             if (headers != null && headers.ContentType != null && headers.ContentType.CharSet != null) {
-                encoding = Encoding.GetEncoding (headers.ContentType.CharSet);
-                preambleLength = StartsWith (buf, buf_length, encoding.GetPreamble ());
+                encoding = Encoding.GetEncoding(headers.ContentType.CharSet);
+                preambleLength = StartsWith(buf, buf_length, encoding.GetPreamble());
             } else {
-                encoding = GetEncodingFromBuffer (buf, buf_length, ref preambleLength) ?? Encoding.UTF8;
+                encoding = GetEncodingFromBuffer(buf, buf_length, ref preambleLength) ?? Encoding.UTF8;
             }
 
-            return encoding.GetString (buf, preambleLength, buf_length - preambleLength);
+            return encoding.GetString(buf, preambleLength, buf_length - preambleLength);
         }
+
+        #endif
 
         static Encoding GetEncodingFromBuffer (byte[] buffer, int length, ref int preambleLength)
         {

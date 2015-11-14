@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Specialized;
 using System.Net.Http.Headers;
-using Rackspace.Threading;
 using System.Reflection;
 using System.IO;
 

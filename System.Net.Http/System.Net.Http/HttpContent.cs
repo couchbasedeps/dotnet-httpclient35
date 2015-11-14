@@ -98,7 +98,7 @@ namespace System.Net.Http
                 throw new ArgumentNullException ("stream");
 
             if (buffer != null)
-                return Rackspace.Threading.StreamExtensions.CopyToAsync(buffer, stream);
+                return buffer.CopyToAsync(stream);
 
             return SerializeToStreamAsync (stream, context);
         }

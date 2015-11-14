@@ -28,7 +28,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Rackspace.Threading;
 
 namespace System.Net.Http
 {
@@ -46,13 +45,20 @@ namespace System.Net.Http
 		protected abstract HttpRequestMessage ProcessRequest (HttpRequestMessage request, CancellationToken cancellationToken);
 		protected abstract HttpResponseMessage ProcessResponse (HttpResponseMessage response, CancellationToken cancellationToken);
 		
-		protected internal sealed override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
-		{
-			// This might be more efficiently implemented with Select(), but that method is unable to correctly translate
-			// a TaskCanceledException into a TaskStatus.Canceled result.
-			request = ProcessRequest (request, cancellationToken);
-			return base.SendAsync (request, cancellationToken)
-				.Then (task => Task.Factory.StartNew (() => ProcessResponse (task.Result, cancellationToken), cancellationToken));
-		}
+        #if !UNITY
+        async
+        #endif
+        protected internal sealed override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            #if UNITY
+            request = ProcessRequest (request, cancellationToken);
+            return base.SendAsync(request, cancellationToken).ContinueWith(t =>
+                ProcessResponse(t.Result, cancellationToken)
+            );
+            #else
+            request = ProcessRequest (request, cancellationToken);
+            return ProcessResponse (await base.SendAsync (request, cancellationToken).ConfigureAwait (false), cancellationToken);
+            #endif
+        }
 	}
 }

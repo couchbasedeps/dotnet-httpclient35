@@ -156,7 +156,7 @@ namespace System.Net.Http
 
                 buffer = Encoding.ASCII.GetBytes (sb.ToString ());
                 sb = new StringBuilder();
-                Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length).Await();
+                stream.WriteAsync(buffer, 0, buffer.Length).Await();
 
                 c.SerializeToStreamAsync(stream, context).Await();
 
@@ -175,7 +175,7 @@ namespace System.Net.Http
             sb.Append ('\r').Append ('\n');
 
             buffer = Encoding.ASCII.GetBytes (sb.ToString ());
-            return Rackspace.Threading.StreamExtensions.WriteAsync(stream, buffer, 0, buffer.Length);
+            return stream.WriteAsync(buffer, 0, buffer.Length);
         }
 
         #else

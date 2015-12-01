@@ -237,9 +237,7 @@ namespace System.Net.Http
 
         internal virtual HttpWebRequest CreateWebRequest (HttpRequestMessage request)
         {
-            var constructor = typeof(HttpWebRequest).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(Uri) },
-                                  null);
-            var wr = (HttpWebRequest)constructor.Invoke(new object[] { request.RequestUri });
+            var wr = (HttpWebRequest)WebRequest.Create(request.RequestUri);
             wr.AllowWriteStreamBuffering = false;
             var throwOnErrorProperty = typeof(HttpWebRequest).GetProperty("ThrowOnError", BindingFlags.NonPublic | BindingFlags.Instance);
             if (throwOnErrorProperty != null) {

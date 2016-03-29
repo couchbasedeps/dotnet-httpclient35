@@ -375,8 +375,14 @@ namespace System.Net.Http
 					break;
 
 				case "connection":
-					request.Connection = headers.Connection.ToString ();
-					break;
+                    var keepAlive = headers.Connection.Find(x => x.ToLowerInvariant().Equals("keep-alive"));
+                    if (keepAlive != null) {
+                        request.KeepAlive = true;
+                        headers.Connection.Remove(x => x.ToLowerInvariant().Equals("keep-alive"));
+                    }
+
+                    request.Connection = headers.Connection.ToString ();
+                    break;
 
 				case "date":
 					// .NET 3.5 does not expose a property for setting this reserved header

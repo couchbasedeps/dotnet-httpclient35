@@ -134,6 +134,7 @@
     <Compile Include="System.Net\WebHeaderCollection.cs" />
     <Compile Include="System.Net\WebRequest.cs" />
     <Compile Include="System.Net\WebResponse.cs" />
+    <Compile Include="System.Net.Http.WebRequest\WebRequestHandler.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
@@ -163,5 +164,8 @@
       <Project>{DCB5D745-525C-46A1-BFC0-E12F87AB6165}</Project>
       <Name>System.Threading.Tasks.Net35</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="System.Net.Http.WebRequest\" />
   </ItemGroup>
 </Project>
